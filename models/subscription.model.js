@@ -54,6 +54,9 @@ const subscriptionSchema = mongoose.Schema({
             message: 'Renewal date must be after the start date',
         }
     },
+    workflowRunId: {
+    type: String,
+},
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User', 
@@ -75,9 +78,13 @@ subscriptionSchema.pre('save', function() {
         this.renewalDate.setDate(this.renewalDate.getDate() + renewalPeriods[this.frequency]);
     }
 
-    if(this.renewalDate < new Date()) {
+if (this.status !== 'cancelled') {
+    if (this.renewalDate < new Date()) {
         this.status = 'expired';
+    } else {
+        this.status = 'active';
     }
+}
 
 });
 

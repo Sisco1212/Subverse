@@ -24,14 +24,23 @@ export const sendReminders = serve(async (context) => {
     for (const daysBefore of REMINDERS) {
         const reminderDate = renewalDate.subtract(daysBefore, 'day');
 
-        if (reminderDate.isAfter(dayjs())) {
-            await sleepUntilReminder(context, `${daysBefore} days before reminder`, reminderDate);
-        }
-
-        if (dayjs().isSame(reminderDate, 'day')) {
-
-            await triggerReminder(context, `${daysBefore} days before reminder`, subscription);
-        }
+//         console.log({
+//     now: dayjs().format(),
+//     renewalDate: renewalDate.format(),
+//     daysBefore,
+//     reminderDate: reminderDate.format(),
+//     isAfter: reminderDate.isAfter(dayjs()),
+//     isSameDay: dayjs().isSame(reminderDate, 'day'),
+// });
+if (dayjs().isSame(reminderDate, 'day')) {
+    await triggerReminder(context, `${daysBefore} days before reminder`, subscription);
+} else if (reminderDate.isAfter(dayjs())) {
+    await sleepUntilReminder(
+        context,
+        `${daysBefore} days before reminder`,
+        reminderDate
+    );
+}
     }
 
 });

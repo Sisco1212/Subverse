@@ -21,6 +21,11 @@ export const createSubscription = async (req, res, next) => {
             retries: 0,
         })
 
+        subscription.workflowRunId = workflowRunId;
+
+await subscription.save();
+
+
         res.status(201).json({ success: true, data: { subscription, workflowRunId } })
     } catch (error) {
         next(error);
@@ -95,7 +100,7 @@ export const updateSubscription = async (req, res, next) => {
             throw error;
         }
 
-        if (subscription.user.toString() != req.user._id) {
+        if (subscription.user.toString() != req.user._id.toString()) {
             const error = new Error("You are not the owner of this subscription");
             error.status = 403;
             throw error;
@@ -161,6 +166,33 @@ export const updateSubscription = async (req, res, next) => {
 
         subscription.set(updates);
         await subscription.save();
+        if (
+    (req.body.startDate !== undefined ||
+    req.body.frequency !== undefined) &&
+    subscription.workflowRunId
+) {
+    await workflowClient.cancel(subscription.workflowRunId);
+}
+
+if (
+    req.body.startDate !== undefined ||
+    req.body.frequency !== undefined
+) {
+    const { workflowRunId } = await workflowClient.trigger({
+        url: `${SERVER_URL}/api/v1/workflows/subscription/reminder`,
+        body: {
+            subscriptionId: subscription.id,
+        },
+        headers: {
+            'content-type': 'application/json',
+        },
+        retries: 0,
+    });
+
+    subscription.workflowRunId = workflowRunId;
+
+    await subscription.save();
+}
 
         res.status(200).json({
             success: true,
@@ -174,3 +206,33 @@ export const updateSubscription = async (req, res, next) => {
         next(error)
     }
 }
+
+
+export const cancelSubscription = async (req, res, next) => {
+    try {
+        const subscription = await Subscription.findById(req.params.id);
+
+        if (!subscription) {
+            const error = new Error("Subscription not found");
+            error.status = 404;
+            throw error;
+        }
+
+        if (subscription.user.toString() != req.user._id.toString()) {
+            const error = new Error("You are not the owner of this subscription");
+            error.status = 403;
+            throw error;
+        }
+
+        subscription.status = "cancelled";
+
+        await subscription.save();
+
+        res.status(200).json({
+            success: true,
+            data: subscription
+        });
+    } catch (error) {
+        next(error);
+    }
+};
