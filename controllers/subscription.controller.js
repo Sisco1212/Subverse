@@ -228,9 +228,65 @@ export const cancelSubscription = async (req, res, next) => {
 
         await subscription.save();
 
+        if (subscription.workflowRunId) {
+    await workflowClient.cancel(subscription.workflowRunId);
+}
+
         res.status(200).json({
             success: true,
             data: subscription
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+export const deleteSubscription = async (req, res, next) => {
+    try {
+        const subscription = await Subscription.findById(req.params.id);
+
+        if (!subscription) {
+            const error = new Error("Subscription not found");
+            error.status = 404;
+            throw error;
+        }
+
+        if (subscription.user.toString() != req.user._id.toString()) {
+            const error = new Error("You are not the owner of this subscription");
+            error.status = 403;
+            throw error;
+        }
+
+        if (subscription.workflowRunId) {
+            await workflowClient.cancel(subscription.workflowRunId);
+        }
+
+        await Subscription.findByIdAndDelete(req.params.id);
+
+        res.status(200).json({
+            success: true,
+            message: "Subscription deleted successfully"
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+export const getUpcomingRenewals = async (req, res, next) => {
+    try {
+        const subscriptions = await Subscription.find({
+            user: req.user._id,
+            status: 'active',
+            renewalDate: {
+                $gte: new Date(),
+            }
+        }).sort({ renewalDate: 1 });
+
+        res.status(200).json({
+            success: true,
+            data: subscriptions
         });
     } catch (error) {
         next(error);
