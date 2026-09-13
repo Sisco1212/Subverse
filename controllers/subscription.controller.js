@@ -199,9 +199,6 @@ if (
             data: subscription
         });
 
-
-
-
     } catch (error) {
         next(error)
     }
